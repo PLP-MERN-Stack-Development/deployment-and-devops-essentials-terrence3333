@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MediLink — Single Page Interactive Prototype (SDG 3)</title>
+<style>
+  :root{
+    --bg:#f6fcfb; --card:#ffffff; --accent:#0b6b58; --accent-2:#0ea5a4;
+    --muted:#6b7280; --danger:#ef4444; --glass: rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;
+    background: linear-gradient(180deg,#ecfeff 0%, #f6fcfb 60%);
+    color:#072023; -webkit-font-smoothing:antialiased;
+  }
+
+  /* App layout */
+  .app{max-width:1100px;margin:18px auto;padding:18px;display:grid;grid-template-columns:320px 1fr;gap:18px}
+  header.app-header{grid-column:1/3;display:flex;align-items:center;gap:14px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+
+  /* Sidebar nav */
+  aside.side{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,.06);height:calc(100vh - 120px);position:sticky;top:18px;overflow:auto}
+  .nav{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .nav button{background:transparent;border:0;padding:10px 12px;border-radius:10px;text-align:left;cursor:pointer;font-weight:600;color:#043033}
+  .nav button.active{background:linear-gradient(90deg,#e6fffa,#f0fdf4);box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+  .small{font-size:13px;color:var(--muted)}
+  .muted{color:var(--muted)}
+
+  /* Main content */
+  main.content{background:transparent;padding:0}
+  .section{background:var(--card);border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(2,6,23,.04);transform-origin:top center;opacity:0;transform:translateY(18px) scale(.995);transition:all .45s cubic-bezier(.2,.9,.2,1)}
+  .section.show{opacity:1;transform:translateY(0) scale(1)}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .full{grid-column:1/3}
+
+  /* components */
+  input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6f6f1;background:transparent}
+  textarea{min-height:80px}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+  .btn.ghost{background:#fff;color:var(--accent);border:1px solid #dff6f0}
+  .btn.warn{background:var(--danger)}
+  .card{background:linear-gradient(180deg,#fff,#fbfffd);padding:12px;border-radius:10px;border:1px solid #f0faf8}
+
+  /* queue list */
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{display:flex;justify-content:space-between;gap:8px;padding:10px;border-radius:10px;border:1px dashed #e8f6f2;background:linear-gradient(90deg,#f8fffe,#fff);align-items:center}
+  .meta{font-size:12px;color:var(--muted)}
+
+  /* ticket */
+  .ticket{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;background:linear-gradient(90deg,#ecfeff,#f0fff4);padding:10px;border-radius:8px;border:1px dashed #c7f0e6}
+
+  /* SOS pulse */
+  .sos{width:120px;height:120px;border-radius:999px;background:radial-gradient(circle at 30% 30%, #ffefef, #ffdede);display:flex;align-items:center;justify-content:center;margin:0 auto;color:var(--danger);font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,.12)}
+  @keyframes pulse {0%{transform:scale(1)}50%{transform:scale(1.14)}100%{transform:scale(1)}}
+  .sos.pulsing{animation:pulse 1.2s infinite}
+
+  /* tips */
+  .tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  .tip{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#fcfffb);border:1px solid #eaf9f4;transition:transform .25s}
+  .tip:hover{transform:translateY(-6px)}
+
+  /* small utilities */
+  .row{display:flex;gap:8px;align-items:center}
+  .muted-sm{font-size:12px;color:var(--muted)}
+  footer{grid-column:1/3;text-align:center;color:var(--muted);font-size:13px;padding:8px 6px}
+
+  /* responsive */
+  @media(max-width:960px){.app{grid-template-columns:1fr; padding:12px}.side{position:relative;height:auto}.section{margin-bottom:12px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="MediLink prototype">
+    <header class="app-header">
+      <div class="logo" aria-hidden>ML</div>
+      <div>
+        <h1>MediLink</h1>
+        <p class="lead">Telehealth prototype — connecting patients, CHWs and doctors (SDG 3)</p>
+      </div>
+    </header>
+
+    <aside class="side" aria-label="Navigation">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:800">MediLink Demo</div>
+            <div class="muted-sm">Interactive single-page app</div>
+          </div>
+          <div class="muted-sm">v1.0</div>
+        </div>
+        <div class="nav" role="tablist" aria-label="Main navigation">
+          <button class="nav-btn active" data-target="home" role="tab">Home</button>
+          <button class="nav-btn" data-target="symptoms" role="tab">Symptom Checker</button>
+          <button class="nav-btn" data-target="patient" role="tab">Request Consult</button>
+          <button class="nav-btn" data-target="chw" role="tab">CHW Vitals</button>
+          <button class="nav-btn" data-target="doctor" role="tab">Doctor Queue</button>
+          <button class="nav-btn" data-target="sos" role="tab">Emergency SOS</button>
+          <button class="nav-btn" data-target="tips" role="tab">Health Tips</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="card">
+        <div style="font-size:13px;font-weight:700">Quick Actions</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="mockCase" class="btn ghost">Mock Case</button>
+          <button id="resetBtn" class="btn ghost">Reset</button>
+        </div>
+        <div style="margin-top:10px" class="muted-sm">Queue length: <span id="queueCount">0</span></div>
+      </div>
+
+      <div style="margin-top:12px" class="card">
+        <div style="font-size:13px;font-weight:700">Nearby Clinics</div>
+        <div class="muted-sm" style="margin-top:8px">Lusaka Central • Kitwe Nkana • Chipata Rural</div>
+      </div>
+    </aside>
+
+    <main class="content" id="main">
+      <!-- HOME -->
+      <section class="section show" id="home">
+        <div class="grid">
+          <div>
+            <h2>Welcome to MediLink</h2>
+            <p class="muted-sm">This single-page prototype demonstrates a telehealth workflow for underserved communities. Use the sidebar to navigate sections. Data is saved locally (localStorage) for demo purposes.</p>
+            <div style="margin-top:12px" class="card">
+              <div style="font-weight:700">How it works</div>
+              <ol class="muted-sm" style="margin-top:8px;padding-left:18px">
+                <li>Patients request consults → CHWs capture vitals → Doctors handle queue → Prescriptions issued.</li>
+                <li>Emergency SOS triggers a simulated alert for quick response.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-size:18px;font-weight:800" id="k_active">0</div>
+                  <div class="muted-sm">Active cases</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:800" id="k_closed">0</div>
+                  <div class="muted-sm">Closed cases</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:800" id="k_rx">0</div>
+                  <div class="muted-sm">Prescriptions</div>
+                </div>
+              </div>
+              <div style="margin-top:12px" class="muted-sm">Tip: Click "Mock Case" to generate sample patients quickly.</div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <div style="font-weight:700">E-Ticket (demo)</div>
+              <div class="ticket" id="demoTicket" style="margin-top:8px">No ticket yet</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SYMPTOM CHECKER -->
+      <section class="section" id="symptoms" aria-labelledby="sympTitle">
+        <h2 id="sympTitle">Symptom Checker</h2>
+        <p class="muted-sm">Select symptoms and get recommended clinics and advice.</p>
+        <div class="grid" style="margin-top:12px">
+          <div>
+            <div class="card">
+              <div style="font-weight:700">Choose symptoms</div>
+              <div style="margin-top:8px">
+                <label><input type="checkbox" class="symp" value="fever"> Fever</label>
+                <label><input type="checkbox" class="symp" value="cough"> Cough</label>
+                <label><input type="checkbox" class="symp" value="headache"> Headache</label>
+                <label><input type="checkbox" class="symp" value="stomach"> Stomach pain</label>
+                <label><input type="checkbox" class="symp" value="bleeding"> Heavy bleeding</label>
+              </div>
+              <div style="margin-top:10px;display:flex;gap:8px">
+                <button class="btn" id="chkBtn">Check</button>
+                <button class="btn ghost" id="clearChk">Clear</button>
+              </div>
+            </div>
+
+            <div style="margin-top:10px" class="card">
+              <div style="font-weight:700">Advice</div>
+              <div id="advice" class="muted-sm" style="margin-top:8px">No symptoms selected.</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div style="font-weight:700">Recommended Clinics</div>
+              <div id="sympResults" style="margin-top:10px" class="list"></div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <div style="font-weight:700">Next steps</div>
+              <ol class="muted-sm" style="margin-top:8px">
+                <li>If severe (e.g., heavy bleeding, severe breathlessness) go to emergency immediately.</li>
+                <li>For mild symptoms try local clinic or schedule teleconsult.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PATIENT REQUEST -->
+      <section class="section" id="patient">
+        <h2>Request Teleconsult</h2>
+        <p class="muted-sm">Fill details and request a consultation — a ticket will be generated.</p>
+        <div style="margin-top:12px" class="card full">
+          <div class="grid">
+            <div>
+              <label>Full name<input id="p_name" placeholder="e.g., Grace Phiri"></label>
+              <label style="margin-top:8px">Phone<input id="p_phone" placeholder="+2607..."></label>
+              <label style="margin-top:8px">Nearest clinic
+                <select id="p_clinic">
+                  <option value="lusaka">Lusaka Central Clinic</option>
+                  <option value="kitwe">Kitwe Nkana Health Post</option>
+                  <option value="chipata">Chipata Rural Clinic</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label>Symptoms<textarea id="p_symptoms" placeholder="Briefly describe your symptoms..."></textarea></label>
+              <label style="margin-top:8px">Payment
+                <select id="p_pay"><option>Mobile Money</option><option>Cash at clinic</option></select>
+              </label>
+
+              <div style="margin-top:10px;display:flex;gap:8px">
+                <button class="btn" id="p_submit">Request Consult</button>
+                <button class="btn ghost" id="p_usssd">USSD Demo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHW VITALS -->
+      <section class="section" id="chw">
+        <h2>Community Health Worker — Vitals & Tests</h2>
+        <p class="muted-sm">Pick an active case to add vitals or rapid-test results.</p>
+        <div style="margin-top:12px" class="card">
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="chw_case" style="flex:1"></select>
+            <button class="btn ghost" id="chw_refresh">Refresh</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <label>BP<input id="v_bp" placeholder="120/80"></label>
+            <label>Temp (°C)<input id="v_temp" placeholder="36.6"></label>
+            <label>Sugar (mmol/L)<input id="v_sugar" placeholder="5.4"></label>
+          </div>
+
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+            <label><input type="checkbox" id="t_mal"> Rapid malaria</label>
+            <label><input type="checkbox" id="t_preg"> Pregnancy test</label>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn" id="chw_save">Save Vitals</button>
+            <button class="btn ghost" id="chw_request_delivery">Request Pharmacy Delivery</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOCTOR QUEUE -->
+      <section class="section" id="doctor">
+        <h2>Doctor — Waiting Room</h2>
+        <p class="muted-sm">Handle open cases: view details, add notes, prescribe and close.</p>
+        <div style="margin-top:12px" class="grid">
+          <div>
+            <div class="card">
+              <div style="font-weight:700">Open Cases</div>
+              <div id="caseList" style="margin-top:10px" class="list"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div id="caseDetail"><div class="muted-sm">Select a case to view details.</div></div>
+              <label style="margin-top:8px">Add note<textarea id="doc_note" placeholder="Assessment & plan"></textarea></label>
+              <label style="margin-top:8px">Prescription<input id="doc_rx" placeholder="Drug & dose"></label>
+              <div style="margin-top:8px;display:flex;gap:8px">
+                <button class="btn" id="doc_addnote">Save Note</button>
+                <button class="btn" id="doc_addrx">Add Rx</button>
+                <button class="btn ghost" id="doc_close">Close Case</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <div style="font-weight:700">Recent Prescriptions</div>
+              <div id="rxList" style="margin-top:10px" class="list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SOS -->
+      <section class="section" id="sos">
+        <h2>Emergency SOS</h2>
+        <p class="muted-sm">Trigger an emergency alert — demo only.</p>
+        <div style="margin-top:16px" class="card">
+          <div id="sosBtn" class="sos">SOS</div>
+          <div id="sosStatus" class="muted-sm" style="margin-top:12px;text-align:center">No active alerts</div>
+        </div>
+      </section>
+
+      <!-- TIPS -->
+      <section class="section" id="tips">
+        <h2>Health Tips</h2>
+        <p class="muted-sm">Simple, shareable health guidance for communities.</p>
+        <div style="margin-top:12px" class="tips">
+          <div class="tip">Attend antenatal care monthly during pregnancy</div>
+          <div class="tip">Wash hands regularly with soap</div>
+          <div class="tip">Keep hydrated — drink safe water</div>
+          <div class="tip">Know danger signs: severe headache, breathlessness</div>
+        </div>
+      </section>
+
+      <footer>Prototype for demonstration. Not for clinical use. Replace demo logic with secured APIs and clinical governance before production.</footer>
+    </main>
+  </div>
+
+<script>
+/* -------------------------
+   Simple SPA behavior & state
+   ------------------------- */
+const sections = Array.from(document.querySelectorAll('.section'));
+const navBtns = Array.from(document.querySelectorAll('.nav-btn'));
+const stateKey = 'medilink_demo_state_v1';
+
+/* Demo state persisted to localStorage */
+let state = loadState() || { cases: [], prescriptions: [] };
+
+/* Utility */
+function uid(){return Math.random().toString(36).slice(2,9)}
+function now(){return new Date().toLocaleString()}
+
+/* Navigation */
+navBtns.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    navBtns.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    showSection(btn.dataset.target);
+  });
+});
+function showSection(id){
+  sections.forEach(s=>{ if(s.id===id){ s.classList.add('show'); s.scrollIntoView({behavior:'smooth', block:'start'});} else s.classList.remove('show')});
+}
+
+/* Render KPIs */
+function renderKPIs(){
+  const active = state.cases.filter(c=>c.status==='open').length;
+  const closed = state.cases.filter(c=>c.status==='closed').length;
+  document.getElementById('k_active').textContent = active;
+  document.getElementById('k_closed').textContent = closed;
+  document.getElementById('k_rx').textContent = state.prescriptions.length;
+  document.getElementById('queueCount').textContent = state.cases.length;
+}
+
+/* Add patient (from patient form) */
+document.getElementById('p_submit').addEventListener('click', ()=>{
+  const name = document.getElementById('p_name').value.trim();
+  const phone = document.getElementById('p_phone').value.trim();
+  const clinic = document.getElementById('p_clinic').value;
+  const symptoms = document.getElementById('p_symptoms').value.trim();
+  if(!name||!phone||!symptoms){ alert('Please fill name, phone and symptoms.'); return; }
+  const c = { id: uid(), name, phone, clinic, symptoms, vitals:{}, notes:[], status:'open', created: now() };
+  state.cases.unshift(c); saveState(); renderAll();
+  document.getElementById('demoTicket').textContent = 'MEDILINK:'+c.id;
+  alert('Consultation requested. Ticket: '+c.id);
+  // clear
+  document.getElementById('p_name').value=''; document.getElementById('p_phone').value=''; document.getElementById('p_symptoms').value='';
+});
+
+/* Symptom checker logic */
+const symptomMap = {
+  fever: ['Lusaka Central Clinic', 'City Health Clinic'],
+  cough: ['Community Hospital', 'HealthFirst Clinic'],
+  headache: ['NeuroCare Center', 'Lusaka Central Clinic'],
+  stomach: ['GastroCare Clinic', 'Chipata Rural Clinic'],
+  bleeding: ['University Teaching Hospital', 'Emergency Ward - Lusaka']
+};
+document.getElementById('chkBtn').addEventListener('click', ()=>{
+  const selected = Array.from(document.querySelectorAll('.symp:checked')).map(i=>i.value);
+  const resultsEl = document.getElementById('sympResults'); resultsEl.innerHTML='';
+  const adviceEl = document.getElementById('advice');
+  if(selected.length===0){ adviceEl.textContent='No symptoms selected'; return; }
+  // aggregate clinics
+  let recs = [];
+  selected.forEach(s=>{ if(symptomMap[s]) recs = recs.concat(symptomMap[s]);});
+  recs = [...new Set(recs)];
+  resultsEl.innerHTML = recs.map(r=>`<div class="item"><div><strong>${r}</strong><div class="muted-sm">Open: 8am - 6pm</div></div><div><button class="btn ghost" onclick="bookClinic('${r.replace(/'/g,'')}')">Book</button></div></div>`).join('');
+  // Advice severity
+  if(selected.includes('bleeding')) adviceEl.textContent = 'Severe sign: go to emergency immediately or tap SOS.';
+  else if(selected.includes('fever') && selected.includes('cough')) adviceEl.textContent = 'Possible infection — consider teleconsult.';
+  else adviceEl.textContent = 'Mild to moderate symptoms — visit local clinic or request teleconsult.';
+});
+document.getElementById('clearChk').addEventListener('click', ()=>{
+  document.querySelectorAll('.symp').forEach(c=>c.checked=false);
+  document.getElementById('sympResults').innerHTML=''; document.getElementById('advice').textContent='No symptoms selected';
+});
+window.bookClinic = function(name){
+  alert('Booking demo for '+name+' — in real app integrate operator booking.');
+}
+
+/* CHW: populate open cases */
+function populateCHWcases(){
+  const sel = document.getElementById('chw_case'); sel.innerHTML='';
+  state.cases.filter(c=>c.status==='open').forEach(c=>{
+    const opt = document.createElement('option'); opt.value=c.id; opt.textContent=`${c.name} — ${c.symptoms.slice(0,36)}`; sel.appendChild(opt);
+  });
+}
+
+/* CHW save vitals */
+document.getElementById('chw_save').addEventListener('click', ()=>{
+  const caseId = document.getElementById('chw_case').value;
+  if(!caseId){ alert('Choose a case first'); return; }
+  const c = state.cases.find(x=>x.id===caseId);
+  if(!c) return;
+  c.vitals.bp = document.getElementById('v_bp').value || c.vitals.bp || '';
+  c.vitals.temp = document.getElementById('v_temp').value || c.vitals.temp || '';
+  c.vitals.sugar = document.getElementById('v_sugar').value || c.vitals.sugar || '';
+  c.vitals.test_mal = document.getElementById('t_mal').checked ? 'pending' : c.vitals.test_mal || 'no';
+  c.vitals.test_preg = document.getElementById('t_preg').checked ? 'pending' : c.vitals.test_preg || 'no';
+  c.notes.push({ts: now(), text: 'Vitals captured by CHW'});
+  saveState(); renderAll();
+  alert('Vitals saved and synced to doctor queue');
+});
+
+/* Doctor list rendering */
+function renderCaseList(){
+  const list = document.getElementById('caseList'); list.innerHTML='';
+  const open = state.cases.filter(c=>c.status==='open');
+  if(open.length===0){ list.innerHTML = '<div class="muted-sm">No active cases</div>'; return; }
+  open.forEach(c=>{
+    const div = document.createElement('div'); div.className='item';
+    div.innerHTML = `<div><strong>${c.name}</strong><div class="muted-sm">${c.symptoms.slice(0,60)}</div></div><div><div class="muted-sm">${c.created}</div><div style="margin-top:6px"><button class="btn ghost" onclick="selectCase('${c.id}')">Open</button></div></div>`;
+    list.appendChild(div);
+  });
+}
+
+/* Select case for doctor */
+window.selectCase = function(id){
+  const c = state.cases.find(x=>x.id===id);
+  if(!c) return;
+  const detail = document.getElementById('caseDetail');
+  detail.innerHTML = `<div style="font-weight:700">${c.name}</div><div class="muted-sm">${c.phone || '—'} • ${c.clinic}</div><div style="margin-top:8px"><strong>Symptoms</strong><div class="muted-sm">${c.symptoms}</div></div><div style="margin-top:8px"><strong>Vitals</strong><div class="muted-sm">BP: ${c.vitals.bp||'–'} | Temp: ${c.vitals.temp||'–'} | Sugar: ${c.vitals.sugar||'–'}</div></div><div style="margin-top:8px"><strong>Notes</strong><div class="muted-sm">${c.notes.map(n=>`<div>${n.ts}: ${n.text}</div>`).join('')}</div></div>`;
+  detail.dataset.active = id;
+}
+
+/* Doctor actions */
+document.getElementById('doc_addnote').addEventListener('click', ()=>{
+  const id = document.getElementById('caseDetail').dataset.active;
+  if(!id){ alert('Select a case'); return; }
+  const note = document.getElementById('doc_note').value.trim(); if(!note){ alert('Add a note'); return; }
+  const c = state.cases.find(x=>x.id===id); c.notes.push({ts:now(), text:note}); document.getElementById('doc_note').value=''; saveState(); renderAll(); alert('Note saved');
+});
+document.getElementById('doc_addrx').addEventListener('click', ()=>{
+  const id = document.getElementById('caseDetail').dataset.active; if(!id){ alert('Select a case'); return; }
+  const rx = document.getElementById('doc_rx').value.trim(); if(!rx){ alert('Enter Rx'); return; }
+  const p = { id: uid(), caseId: id, rx, issuedAt: now() }; state.prescriptions.unshift(p); document.getElementById('doc_rx').value=''; saveState(); renderAll(); alert('Prescription added (patient will receive SMS in real app)');
+});
+document.getElementById('doc_close').addEventListener('click', ()=>{
+  const id = document.getElementById('caseDetail').dataset.active; if(!id){ alert('Select a case'); return; }
+  const c = state.cases.find(x=>x.id===id); c.status='closed'; saveState(); renderAll(); alert('Case closed');
+});
+
+/* Render prescriptions */
+function renderRX(){
+  const el = document.getElementById('rxList'); el.innerHTML='';
+  if(state.prescriptions.length===0){ el.innerHTML='<div class="muted-sm">No prescriptions</div>'; return; }
+  state.prescriptions.slice(0,6).forEach(p=>{
+    const div = document.createElement('div'); div.className='item'; div.innerHTML = `<div><strong>${p.rx}</strong><div class="muted-sm">${p.issuedAt}</div></div><div><button class="btn ghost" onclick="copyText('${p.id}')">Copy ID</button></div>`; el.appendChild(div);
+  });
+}
+
+/* copy helper */
+window.copyText = function(id){
+  navigator.clipboard?.writeText(id).then(()=>alert('Copied ID: '+id)).catch(()=>alert('Copy failed'));
+}
+
+/* SOS */
+const sosBtn = document.getElementById('sosBtn'), sosStatus = document.getElementById('sosStatus');
+let sosActive = false;
+sosBtn.addEventListener('click', ()=> {
+  sosActive = !sosActive;
+  sosBtn.classList.toggle('pulsing', sosActive);
+  sosStatus.textContent = sosActive ? 'SOS Alert Sent — help is on the way (demo)' : 'No active alerts';
+});
+
+/* Mock case generator & reset */
+document.getElementById('mockCase').addEventListener('click', ()=> {
+  const names = ['Evelyn Mwale','Joseph Banda','Mercy Phiri','Daniel Chitundu','Ruth Zulu'];
+  const symptoms = ['fever and headache','cough and sore throat','reduced fetal movement','abdominal pain','severe bleeding'];
+  const clinics = ['lusaka','kitwe','chipata'];
+  const c = { id: uid(), name: names[Math.floor(Math.random()*names.length)], phone: '+26097'+Math.floor(100000+Math.random()*899999), clinic: clinics[Math.floor(Math.random()*clinics.length)], symptoms: symptoms[Math.floor(Math.random()*symptoms.length)], vitals:{}, notes:[], status:'open', created: now() };
+  state.cases.unshift(c); saveState(); renderAll();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=> {
+  if(confirm('Reset demo data?')) { state = { cases: [], prescriptions: [] }; saveState(); renderAll(); document.getElementById('demoTicket').textContent='No ticket yet'; }
+});
+
+/* storage */
+function saveState(){ localStorage.setItem(stateKey, JSON.stringify(state)); }
+function loadState(){ try{ return JSON.parse(localStorage.getItem(stateKey)) }catch(e){return null} }
+
+/* initial render fn */
+function renderAll(){
+  renderKPIs(); populateCHWcases(); renderCaseList(); renderRX();
+  // clear selected detail if closed
+  const detailActive = document.getElementById('caseDetail').dataset.active;
+  if(detailActive){ const c = state.cases.find(x=>x.id===detailActive); if(c && c.status==='closed'){ document.getElementById('caseDetail').innerHTML = '<div class="muted-sm">Select a case to view details.</div>'; document.getElementById('caseDetail').removeAttribute('data-active'); } }
+}
+
+/* symptom & CHW refresh */
+document.getElementById('chw_refresh').addEventListener('click', populateCHWcases);
+
+/* initial boot */
+renderAll();
+showSection('home'); // show home on load
+
+// Keyboard shortcut: N to create mock case
+document.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='n'){ document.getElementById('mockCase').click(); } });
+</script>
+</body>
+</html>

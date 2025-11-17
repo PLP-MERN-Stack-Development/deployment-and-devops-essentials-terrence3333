@@ -17,11 +17,7 @@ mern-app/
 ├── .env.example # Environment variable templates
 └── README.md
 
-Live Deployment URLs
 
-Frontend (Netlify): [Add Netlify URL here]
-
-Backend API (Render): [Add Render URL here]
 
 🛠 Technology Stack
 Frontend
